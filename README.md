@@ -1,25 +1,18 @@
-# Crash Live Analyzer — prototype
+# Crash Live Analyzer — multi-game prototype
 
-## What it does
-- Android app prototype (minimum Android 8.1 / API 27).
-- Requests the system screen-capture permission.
-- Uses on-device ML Kit text recognition to look for multiplier-like text on screen.
-- Saves recognized values locally.
+## Current modules
+- **Crash analyzer:** screen-capture and OCR prototype for multiplier-like text. The OCR has not yet been validated against a live game screen.
+- **Mines / diamonds and bombs:** probability calculator for a randomly and uniformly placed bomb grid. It cannot reveal the hidden bomb positions.
+- **Blackjack:** basic hit/stand/double decision helper using the player's cards and the dealer's up-card. This is a simplified guide, not a complete casino-rule strategy engine.
+- **Chicken Road / chicken game:** risk calculator based on a user-entered per-step success probability. It is only meaningful when that probability is known and applicable.
+- **Shell / ball / cup game:** manual tracker that updates the estimated cup containing the ball when the user records each observed swap. It does not track motion automatically from video.
 
 ## Important limitations
-- This is an untested prototype source project, not a ready-to-install APK.
-- OCR reads the whole screen, so it may capture duplicate/stale multipliers, amounts, or other text. It needs testing and tuning against the actual game screen.
-- The current deduplication is only session-level and value-based; repeated values in different rounds can be incorrectly skipped. It is not yet robust enough for reliable live round-by-round logging.
-- It does not predict the next crash multiplier or interact with betting controls.
-- Android may stop capture when permission is revoked or the system kills the process.
-- Screen capture is sensitive: only use it on your own device and stop it when finished.
+This is a prototype and has not been validated on-device. It does not predict hidden random outcomes with certainty, access a casino's server, or place bets. For games that use server-side randomness, visible prior outcomes do not reveal the next hidden result. Do not stake money based on these estimates.
 
-## Build via GitHub Actions using a phone
-1. Create a new GitHub repository from the GitHub mobile website/app.
-2. Upload all files and folders from this project to the repository (keep the `.github/workflows/build.yml` path).
-3. Open the repository's **Actions** tab and run **Build Android APK** (or push to `main`).
-4. When it finishes, open the workflow run, download the `crash-live-debug-apk` artifact, unzip it, and install `app-debug.apk`.
-5. Android may ask you to allow installation from that browser/file manager. Only install APKs you built and trust.
+The Crash OCR currently reads the whole screen and has known risks of stale/duplicate multipliers and missed values. It needs testing and tuning against the target game's actual history panel before relying on its data.
 
-## Next development step
-Crop OCR to the HISTORY area and detect changes in the ordered grid. This is required before relying on collected data.
+## Build
+The GitHub Actions workflow builds a debug APK when a commit is pushed to `main`. Open the latest run under Actions, wait until it completes successfully, then download the `crash-live-debug-apk` artifact and unzip it to get `app-debug.apk`.
+
+Minimum Android version is API 27 (Android 8.1). Screen capture requires explicit Android permission and should only be used on a device and content you are authorized to capture.
