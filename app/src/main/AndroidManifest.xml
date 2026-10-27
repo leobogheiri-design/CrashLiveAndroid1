@@ -16,6 +16,9 @@
         <activity
             android:name=".MinesActivity"
             android:exported="false" />
+        <activity android:name=".BlackjackActivity" android:exported="false" />
+        <activity android:name=".ChickenActivity" android:exported="false" />
+        <activity android:name=".ShellGameActivity" android:exported="false" />
         <service
             android:name=".CaptureService"
             android:exported="false"
