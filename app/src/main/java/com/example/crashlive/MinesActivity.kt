@@ -92,7 +92,7 @@ class MinesActivity : Activity() {
         setText(initial)
         textSize = 17f
         inputType = InputType.TYPE_CLASS_NUMBER
-        singleLine = true
+        isSingleLine = true
         contentDescription = hintText
         setPadding(14, 10, 14, 10)
         setBackgroundColor(Color.WHITE)
