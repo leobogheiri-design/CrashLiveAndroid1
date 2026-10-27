@@ -67,7 +67,7 @@ class BlackjackActivity : Activity() {
     }
 
     private fun input(hintText: String, initial: String) = EditText(this).apply {
-        hint = hintText; setText(initial); textSize = 17f; singleLine = true
+        hint = hintText; setText(initial); textSize = 17f; isSingleLine = true
         setPadding(14, 10, 14, 10); setBackgroundColor(Color.WHITE)
     }
 
