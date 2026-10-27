@@ -61,6 +61,24 @@ class MainActivity : Activity() {
                 startActivity(Intent(this@MainActivity, MinesActivity::class.java))
             }
         }
+        val blackjack = Button(this).apply {
+            text = "راهنمای بلک‌جک"
+            setOnClickListener {
+                startActivity(Intent(this@MainActivity, BlackjackActivity::class.java))
+            }
+        }
+        val chicken = Button(this).apply {
+            text = "محاسبه ریسک بازی مرغ"
+            setOnClickListener {
+                startActivity(Intent(this@MainActivity, ChickenActivity::class.java))
+            }
+        }
+        val shellGame = Button(this).apply {
+            text = "ردیاب گول یا پوچ"
+            setOnClickListener {
+                startActivity(Intent(this@MainActivity, ShellGameActivity::class.java))
+            }
+        }
         results = TextView(this).apply {
             textSize = 15f
             setTextColor(Color.DKGRAY)
@@ -73,6 +91,9 @@ class MainActivity : Activity() {
         root.addView(stop)
         root.addView(clear)
         root.addView(mines)
+        root.addView(blackjack)
+        root.addView(chicken)
+        root.addView(shellGame)
         root.addView(TextView(this).apply { text = "ضرایب شناسایی‌شده"; textSize = 19f; setPadding(0,16,0,6) })
         val scroll = ScrollView(this)
         scroll.addView(results)
