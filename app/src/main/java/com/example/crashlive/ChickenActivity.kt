@@ -60,7 +60,7 @@ class ChickenActivity : Activity() {
         text=s; textSize=16f; setTextColor(Color.rgb(35,45,60)); setPadding(0,12,0,4)
     }
     private fun input(h: String, v: String) = EditText(this).apply {
-        hint=h; setText(v); textSize=17f; singleLine=true
+        hint=h; setText(v); textSize=17f; isSingleLine = true
         inputType=android.text.InputType.TYPE_CLASS_NUMBER or android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL
         setPadding(14,10,14,10); setBackgroundColor(Color.WHITE)
     }
