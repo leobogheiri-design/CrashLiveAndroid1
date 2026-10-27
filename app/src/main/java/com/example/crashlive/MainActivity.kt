@@ -55,6 +55,12 @@ class MainActivity : Activity() {
                 results.text = "تاریخچه پاک شد."
             }
         }
+        val mines = Button(this).apply {
+            text = "تحلیل احتمال الماس و بمب"
+            setOnClickListener {
+                startActivity(Intent(this@MainActivity, MinesActivity::class.java))
+            }
+        }
         results = TextView(this).apply {
             textSize = 15f
             setTextColor(Color.DKGRAY)
@@ -66,6 +72,7 @@ class MainActivity : Activity() {
         root.addView(start)
         root.addView(stop)
         root.addView(clear)
+        root.addView(mines)
         root.addView(TextView(this).apply { text = "ضرایب شناسایی‌شده"; textSize = 19f; setPadding(0,16,0,6) })
         val scroll = ScrollView(this)
         scroll.addView(results)
