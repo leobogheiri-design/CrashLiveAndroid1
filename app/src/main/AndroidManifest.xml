@@ -5,23 +5,17 @@
         android:label="Crash Live Analyzer"
         android:theme="@android:style/Theme.Material.Light.NoActionBar"
         android:usesCleartextTraffic="false">
-        <activity
-            android:name=".MainActivity"
-            android:exported="true">
+        <activity android:name=".MainActivity" android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity
-            android:name=".MinesActivity"
-            android:exported="false" />
+        <activity android:name=".MinesActivity" android:exported="false" />
         <activity android:name=".BlackjackActivity" android:exported="false" />
         <activity android:name=".ChickenActivity" android:exported="false" />
         <activity android:name=".ShellGameActivity" android:exported="false" />
-        <service
-            android:name=".CaptureService"
-            android:exported="false"
-            android:foregroundServiceType="mediaProjection" />
+        <activity android:name=".CoinTossActivity" android:exported="false" />
+        <service android:name=".CaptureService" android:exported="false" android:foregroundServiceType="mediaProjection" />
     </application>
 </manifest>
