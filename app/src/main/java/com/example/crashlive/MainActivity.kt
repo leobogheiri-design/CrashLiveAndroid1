@@ -57,27 +57,23 @@ class MainActivity : Activity() {
         }
         val mines = Button(this).apply {
             text = "تحلیل احتمال الماس و بمب"
-            setOnClickListener {
-                startActivity(Intent(this@MainActivity, MinesActivity::class.java))
-            }
+            setOnClickListener { startActivity(Intent(this@MainActivity, MinesActivity::class.java)) }
         }
         val blackjack = Button(this).apply {
             text = "راهنمای بلک‌جک"
-            setOnClickListener {
-                startActivity(Intent(this@MainActivity, BlackjackActivity::class.java))
-            }
+            setOnClickListener { startActivity(Intent(this@MainActivity, BlackjackActivity::class.java)) }
         }
         val chicken = Button(this).apply {
             text = "محاسبه ریسک بازی مرغ"
-            setOnClickListener {
-                startActivity(Intent(this@MainActivity, ChickenActivity::class.java))
-            }
+            setOnClickListener { startActivity(Intent(this@MainActivity, ChickenActivity::class.java)) }
         }
         val shellGame = Button(this).apply {
             text = "ردیاب گول یا پوچ"
-            setOnClickListener {
-                startActivity(Intent(this@MainActivity, ShellGameActivity::class.java))
-            }
+            setOnClickListener { startActivity(Intent(this@MainActivity, ShellGameActivity::class.java)) }
+        }
+        val coinToss = Button(this).apply {
+            text = "شیر یا خط"
+            setOnClickListener { startActivity(Intent(this@MainActivity, CoinTossActivity::class.java)) }
         }
         results = TextView(this).apply {
             textSize = 15f
@@ -94,6 +90,7 @@ class MainActivity : Activity() {
         root.addView(blackjack)
         root.addView(chicken)
         root.addView(shellGame)
+        root.addView(coinToss)
         root.addView(TextView(this).apply { text = "ضرایب شناسایی‌شده"; textSize = 19f; setPadding(0,16,0,6) })
         val scroll = ScrollView(this)
         scroll.addView(results)
