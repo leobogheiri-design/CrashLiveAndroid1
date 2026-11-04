@@ -1,18 +1,25 @@
 # Crash Live Analyzer — multi-game prototype
 
+## Floating Crash panel
+The app includes a real Android overlay service for the Crash screen:
+- Start the app and tap **نمایش پنل شناور روی بازی**.
+- On the first run, allow **Display over other apps** for Crash Live Analyzer, return to the app, and tap the same button again.
+- The floating panel appears above other apps. Drag it by its title bar; use **جمع/باز** to collapse or expand it, **شفافیت** to cycle opacity, and **بستن** to close it.
+- Start **شروع بررسی زنده** separately if you want screen capture and OCR to read visible multiplier history. Android will ask for screen-capture permission.
+
+The panel can display historical sample statistics and capture status. It does not know or predict the next random Crash multiplier and cannot access VegasBet's private game server or place bets.
+
 ## Current modules
-- **Crash analyzer:** screen-capture and OCR prototype for multiplier-like text. The OCR has not yet been validated against a live game screen.
-- **Mines / diamonds and bombs:** probability calculator for a randomly and uniformly placed bomb grid. It cannot reveal the hidden bomb positions.
-- **Blackjack:** basic hit/stand/double decision helper using the player's cards and the dealer's up-card. This is a simplified guide, not a complete casino-rule strategy engine.
-- **Chicken Road / chicken game:** risk calculator based on a user-entered per-step success probability. It is only meaningful when that probability is known and applicable.
-- **Shell / ball / cup game:** manual tracker that updates the estimated cup containing the ball when the user records each observed swap. It does not track motion automatically from video.
+- **Crash analyzer:** screen-capture and OCR prototype for multiplier-like text. OCR still needs validation against the target game's live history panel.
+- **Mines / diamonds and bombs:** probability calculator for a randomly and uniformly placed bomb grid. It cannot reveal hidden bomb positions.
+- **Blackjack:** basic hit/stand/double decision helper using the player's cards and dealer's up-card.
+- **Chicken Road / chicken game:** risk calculator based on a user-entered per-step success probability.
+- **Shell / ball / cup game:** manual tracker updated by recording each observed swap; it does not automatically track motion from video.
 
 ## Important limitations
-This is a prototype and has not been validated on-device. It does not predict hidden random outcomes with certainty, access a casino's server, or place bets. For games that use server-side randomness, visible prior outcomes do not reveal the next hidden result. Do not stake money based on these estimates.
-
-The Crash OCR currently reads the whole screen and has known risks of stale/duplicate multipliers and missed values. It needs testing and tuning against the target game's actual history panel before relying on its data.
+This is a prototype and has not been fully validated on every device or VegasBet layout. Screen OCR can miss or misread multipliers. Server-side random outcomes cannot be inferred from visible prior results. Do not stake money based on estimates.
 
 ## Build
 The GitHub Actions workflow builds a debug APK when a commit is pushed to `main`. Open the latest run under Actions, wait until it completes successfully, then download the `crash-live-debug-apk` artifact and unzip it to get `app-debug.apk`.
 
-Minimum Android version is API 27 (Android 8.1). Screen capture requires explicit Android permission and should only be used on a device and content you are authorized to capture.
+Minimum Android version is API 27 (Android 8.1). Screen capture and overlay require explicit Android permissions.
