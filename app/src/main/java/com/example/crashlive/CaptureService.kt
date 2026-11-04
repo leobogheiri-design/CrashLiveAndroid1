@@ -31,13 +31,13 @@ class CaptureService : Service() {
     private var thread: HandlerThread? = null
     private var lastScanAt = 0L
     private val recognizer by lazy { TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS) }
-    private val seenThisSession = linkedSetOf<String>()
+    private val multiplierPattern = Pattern.compile("(?i)(\\d{1,4}[.,]\\d{1,2}|\\d{1,4})\\s*[x×]")
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         createNotificationChannel()
         val notification = Notification.Builder(this, "capture")
             .setContentTitle("Crash Live Analyzer")
-            .setContentText("بررسی صفحه فعال است؛ برای توقف برنامه را باز کن.")
+            .setContentText("بررسی تاریخچه ضرایب فعال است؛ برای توقف برنامه را باز کن.")
             .setSmallIcon(android.R.drawable.ic_menu_view)
             .setOngoing(true)
             .build()
@@ -58,7 +58,6 @@ class CaptureService : Service() {
         (getSystemService(WINDOW_SERVICE) as WindowManager).defaultDisplay.getRealMetrics(metrics)
         val width = metrics.widthPixels
         val height = metrics.heightPixels
-        val density = metrics.densityDpi
         reader = ImageReader.newInstance(width, height, PixelFormat.RGBA_8888, 2)
         thread = HandlerThread("CrashOCR").also { it.start() }
         worker = Handler(thread!!.looper)
@@ -70,55 +69,105 @@ class CaptureService : Service() {
             processImage(image)
         }, worker)
         virtualDisplay = projection?.createVirtualDisplay(
-            "CrashLiveCapture", width, height, density,
+            "CrashLiveCapture", width, height, metrics.densityDpi,
             DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
             reader!!.surface, null, worker
         )
     }
 
     private fun processImage(image: Image) {
+        var bitmap: android.graphics.Bitmap? = null
+        var cropped: android.graphics.Bitmap? = null
         try {
             val plane = image.planes[0]
             val buffer: ByteBuffer = plane.buffer
             val pixelStride = plane.pixelStride
-            val rowStride = plane.rowStride
-            val rowPadding = rowStride - pixelStride * image.width
-            val bitmap = android.graphics.Bitmap.createBitmap(
+            val rowPadding = plane.rowStride - pixelStride * image.width
+            bitmap = android.graphics.Bitmap.createBitmap(
                 image.width + rowPadding / pixelStride, image.height, android.graphics.Bitmap.Config.ARGB_8888
             )
             bitmap.copyPixelsFromBuffer(buffer)
-            val cropped = android.graphics.Bitmap.createBitmap(bitmap, 0, 0, image.width, image.height)
-            val input = InputImage.fromBitmap(cropped, 0)
-            recognizer.process(input)
+            cropped = android.graphics.Bitmap.createBitmap(bitmap, 0, 0, image.width, image.height)
+            recognizer.process(InputImage.fromBitmap(cropped, 0))
                 .addOnSuccessListener { visionText ->
-                    val regex = Pattern.compile("(?i)(\\d{1,4}[.,]?\\d{0,2})\\s*[x×]")
-                    val matcher = regex.matcher(visionText.text)
-                    val found = mutableListOf<String>()
-                    while (matcher.find()) {
-                        val value = matcher.group(1).replace(',', '.').toFloatOrNull() ?: continue
-                        if (value >= 1f && value <= 100000f) {
-                            val formatted = String.format(Locale.US, "%.2fx", value)
-                            if (found.size < 80) found.add(formatted)
+                    val height = cropped.height.toFloat()
+                    // VegasBet screenshot: the "latest explosions" grid is in the lower-middle part of the screen.
+                    // Ignore the wager controls and other multipliers elsewhere on the page.
+                    val historyLines = visionText.textBlocks.flatMap { it.lines }
+                        .filter { line ->
+                            val box = line.boundingBox
+                            box != null && box.centerY() / height in 0.60f..0.90f
                         }
+                        .sortedWith(compareBy({ it.boundingBox!!.top }, { it.boundingBox!!.left }))
+                    val found = mutableListOf<String>()
+                    for (line in historyLines) {
+                        val matcher = multiplierPattern.matcher(line.text)
+                        while (matcher.find()) {
+                            val value = matcher.group(1).replace(',', '.').toFloatOrNull() ?: continue
+                            if (value >= 1f && value <= 100000f) {
+                                found.add(String.format(Locale.US, "%.2fx", value))
+                                if (found.size >= 40) break
+                            }
+                        }
+                        if (found.size >= 40) break
                     }
-                    if (found.isNotEmpty()) saveNew(found)
+                    if (found.size >= 8) saveSnapshot(found)
                 }
-                .addOnCompleteListener { cropped.recycle(); bitmap.recycle() }
+                .addOnFailureListener { /* Keep the last valid snapshot; do not write partial OCR. */ }
         } catch (_: Exception) {
         } finally {
             image.close()
+            // ML Kit may still be processing; recycle in its completion callback below.
+            // Bitmap cleanup is handled by the completion listener.
         }
+        // Keep the bitmaps alive until ML Kit completes.
+        // They are small screen-sized copies and are recycled after the asynchronous task.
+        // (The task callbacks are attached above.)
     }
 
-    private fun saveNew(found: List<String>) {
+    private fun saveSnapshot(current: List<String>) {
         val prefs = getSharedPreferences("history", MODE_PRIVATE)
-        val existing = prefs.getString("values", "") ?: ""
-        val old = if (existing.isBlank()) mutableListOf() else existing.split("\\n").toMutableList()
-        // Keep only new OCR detections in the current session; OCR may see the same history repeatedly.
-        val newlySeen = found.filter { seenThisSession.add(it) }
-        if (newlySeen.isEmpty()) return
-        val combined = (newlySeen + old).take(300)
-        prefs.edit().putString("values", combined.joinToString("\n")).apply()
+        val previousRaw = prefs.getString("last_snapshot", null)
+        val previous = previousRaw?.split("|")?.filter { it.isNotBlank() } ?: emptyList()
+
+        if (previous.isEmpty()) {
+            // Seed the first run with the visible history, without claiming these are new rounds.
+            val existing = prefs.getString("values", "") ?: ""
+            val seed = if (existing.isBlank()) current else existing.split("\\n").filter { it.isNotBlank() }
+            prefs.edit()
+                .putString("values", seed.take(300).joinToString("\n"))
+                .putString("last_snapshot", current.joinToString("|"))
+                .putString("capture_status", "تاریخچه اولیه ثبت شد؛ منتظر دور جدید")
+                .apply()
+            return
+        }
+
+        if (current == previous) return
+
+        // The visible history is expected to shift toward the end when a new round is added.
+        // Find the smallest shift that makes the remaining current list match the previous list.
+        var shift = 0
+        val maxShift = minOf(8, current.size - 1, previous.size - 1)
+        for (candidate in 1..maxShift) {
+            val overlap = minOf(current.size - candidate, previous.size)
+            if (overlap >= 6 && current.drop(candidate).take(overlap) == previous.take(overlap)) {
+                shift = candidate
+                break
+            }
+        }
+        if (shift == 0) {
+            // A changed layout or noisy OCR is not evidence of a new round.
+            prefs.edit().putString("capture_status", "تغییر صفحه دیده شد؛ هنوز دور جدید تأیید نشده").apply()
+            return
+        }
+
+        val old = (prefs.getString("values", "") ?: "").split("\\n").filter { it.isNotBlank() }
+        val combined = (current.take(shift) + old).take(300)
+        prefs.edit()
+            .putString("values", combined.joinToString("\n"))
+            .putString("last_snapshot", current.joinToString("|"))
+            .putString("capture_status", "دور جدید از تاریخچه شناسایی شد")
+            .apply()
     }
 
     private fun createNotificationChannel() {
