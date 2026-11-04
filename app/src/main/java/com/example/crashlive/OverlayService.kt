@@ -173,12 +173,12 @@ class OverlayService : Service() {
     private fun updateSummary() {
         val prefs = getSharedPreferences("history", MODE_PRIVATE)
         val raw = prefs.getString("values", "") ?: ""
-        val values = raw.split("\\n").mapNotNull { line ->
+        val values = raw.split("\n").mapNotNull { line ->
             line.trim().lowercase(Locale.US).removeSuffix("x").replace(',', '.').toFloatOrNull()
         }.filter { it >= 1f }.take(300)
 
         val captureStatus = prefs.getString("capture_status", "وضعیت بررسی صفحه: شروع نشده") ?: ""
-        summary?.text = ForecastEngine.buildReport(values) + "\\n" + captureStatus
+        summary?.text = ForecastEngine.buildReport(values) + "\n" + captureStatus
     }
 
     override fun onDestroy() {
