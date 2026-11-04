@@ -79,11 +79,11 @@ class OverlayService : Service() {
 
     private fun updateSummary() {
         val raw = getSharedPreferences("history", MODE_PRIVATE).getString("values", "") ?: ""
-        val values = raw.split("\\n").mapNotNull { line ->
+        val values = raw.split("\n").mapNotNull { line ->
             line.trim().lowercase(Locale.US).removeSuffix("x").replace(',', '.').toFloatOrNull()
         }.filter { it >= 1f }.take(100)
         if (values.isEmpty()) {
-            summary?.text = "هنوز داده‌ای ثبت نشده.\\nابتدا بررسی صفحه را فعال کن."
+            summary?.text = "هنوز داده‌ای ثبت نشده.\nابتدا بررسی صفحه را فعال کن."
             return
         }
         fun rate(threshold: Float): String {
@@ -91,9 +91,9 @@ class OverlayService : Service() {
             val pct = hits * 100f / values.size
             return String.format(Locale.US, "%.1fx یا بیشتر: %.1f%%", threshold, pct)
         }
-        summary?.text = "نمونه‌های خوانده‌شده: ${values.size}\\n" +
-            rate(1.5f) + "\\n" + rate(2f) + "\\n" + rate(5f) +
-            "\\n\\nآمار تاریخی است؛ پیش‌بینی دور بعد نیست."
+        summary?.text = "نمونه‌های خوانده‌شده: ${values.size}\n" +
+            rate(1.5f) + "\n" + rate(2f) + "\n" + rate(5f) +
+            "\n\nآمار تاریخی است؛ پیش‌بینی دور بعد نیست."
     }
 
     override fun onDestroy() {
