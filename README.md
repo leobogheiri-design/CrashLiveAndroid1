@@ -1,25 +1,25 @@
-# Crash Live Analyzer — multi-game prototype
+# Linkon
 
-## Floating Crash panel
-The app includes a real Android overlay service for the Crash screen:
-- Start the app and tap **نمایش پنل شناور روی بازی**.
-- On the first run, allow **Display over other apps** for Crash Live Analyzer, return to the app, and tap the same button again.
-- The floating panel appears above other apps. Drag it by its title bar; use **جمع/باز** to collapse or expand it, **شفافیت** to cycle opacity, and **بستن** to close it.
-- Start **شروع بررسی زنده** separately if you want screen capture and OCR to read visible multiplier history. Android will ask for screen-capture permission.
+Linkon is an Android app with a floating Crash analysis panel and additional probability/risk tools.
 
-The panel can display historical sample statistics and capture status. It does not know or predict the next random Crash multiplier and cannot access VegasBet's private game server or place bets.
+## Floating panel over VegasBet
+- Open Linkon and tap **نمایش پنل شناور روی بازی**.
+- Allow Android's **Display over other apps** permission, return to Linkon, and tap the button again.
+- The panel is designed to remain above other apps, including VegasBet. Drag it by its title; use **جمع/باز** to collapse or expand, **شفافیت** to change opacity, and **بستن** to close it.
+- Start **شروع بررسی زنده** separately to grant screen-capture permission and let OCR inspect visible multiplier history.
 
-## Current modules
-- **Crash analyzer:** screen-capture and OCR prototype for multiplier-like text. OCR still needs validation against the target game's live history panel.
-- **Mines / diamonds and bombs:** probability calculator for a randomly and uniformly placed bomb grid. It cannot reveal hidden bomb positions.
-- **Blackjack:** basic hit/stand/double decision helper using the player's cards and dealer's up-card.
-- **Chicken Road / chicken game:** risk calculator based on a user-entered per-step success probability.
-- **Shell / ball / cup game:** manual tracker updated by recording each observed swap; it does not automatically track motion from video.
+## Crash analysis
+Linkon reads visible multiplier history using on-device OCR and calculates recency-weighted historical rates for thresholds such as 1.5x, 2x, and 5x. It also displays approximate uncertainty intervals and the median of recent observations. At least 30 valid observations are required before showing estimates.
 
-## Important limitations
-This is a prototype and has not been fully validated on every device or VegasBet layout. Screen OCR can miss or misread multipliers. Server-side random outcomes cannot be inferred from visible prior results. Do not stake money based on estimates.
+**Important:** Crash outcomes are generally generated randomly and independently. Historical rates describe past observations; they do not reveal or reliably predict the next multiplier. Linkon does not connect to VegasBet's private server, guarantee a result, or place bets. OCR can miss or misread values, so check the capture status and treat the estimates as descriptive statistics, not betting signals.
 
-## Build
-The GitHub Actions workflow builds a debug APK when a commit is pushed to `main`. Open the latest run under Actions, wait until it completes successfully, then download the `crash-live-debug-apk` artifact and unzip it to get `app-debug.apk`.
+## Other tools
+- Mines: probability calculator for randomly placed bombs; it cannot reveal hidden positions.
+- Blackjack: basic hit/stand/double decision helper.
+- Chicken game: risk calculator based on a user-entered per-step success probability.
+- Shell game: manual tracker; it does not automatically track video motion.
 
-Minimum Android version is API 27 (Android 8.1). Screen capture and overlay require explicit Android permissions.
+## Compatibility and build
+Minimum Android version: API 27 (Android 8.1). Overlay and screen capture require explicit Android permissions. The app has not yet been validated on every VegasBet layout or on the target A5 2017 device.
+
+GitHub Actions builds a debug APK on pushes to `main`. Download the latest successful `Linkon-APK` artifact from the repository's Actions page.
