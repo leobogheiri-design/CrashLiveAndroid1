@@ -42,7 +42,6 @@ class CaptureService : Service() {
             .setOngoing(true)
             .build()
         startForeground(17, notification)
-
         val resultCode = intent?.getIntExtra("resultCode", Activity.RESULT_CANCELED) ?: Activity.RESULT_CANCELED
         val data = if (Build.VERSION.SDK_INT >= 33) intent?.getParcelableExtra("data", Intent::class.java)
                    else @Suppress("DEPRECATION") intent?.getParcelableExtra("data") as? Intent
@@ -70,33 +69,32 @@ class CaptureService : Service() {
         }, worker)
         virtualDisplay = projection?.createVirtualDisplay(
             "CrashLiveCapture", width, height, metrics.densityDpi,
-            DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
-            reader!!.surface, null, worker
+            DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR, reader!!.surface, null, worker
         )
     }
 
     private fun processImage(image: Image) {
-        var bitmap: android.graphics.Bitmap? = null
-        var cropped: android.graphics.Bitmap? = null
         try {
             val plane = image.planes[0]
             val buffer: ByteBuffer = plane.buffer
             val pixelStride = plane.pixelStride
             val rowPadding = plane.rowStride - pixelStride * image.width
-            bitmap = android.graphics.Bitmap.createBitmap(
+            val frame = android.graphics.Bitmap.createBitmap(
                 image.width + rowPadding / pixelStride, image.height, android.graphics.Bitmap.Config.ARGB_8888
             )
-            bitmap.copyPixelsFromBuffer(buffer)
-            cropped = android.graphics.Bitmap.createBitmap(bitmap, 0, 0, image.width, image.height)
-            recognizer.process(InputImage.fromBitmap(cropped, 0))
+            frame.copyPixelsFromBuffer(buffer)
+            val crop = android.graphics.Bitmap.createBitmap(frame, 0, 0, image.width, image.height)
+            image.close()
+
+            recognizer.process(InputImage.fromBitmap(crop, 0))
                 .addOnSuccessListener { visionText ->
-                    val height = cropped.height.toFloat()
-                    // VegasBet screenshot: the "latest explosions" grid is in the lower-middle part of the screen.
-                    // Ignore the wager controls and other multipliers elsewhere on the page.
+                    val screenHeight = crop.height.toFloat()
+                    // The supplied VegasBet screenshot places the latest-explosions grid at ~66–82% height.
+                    // Keep a wider band for small differences in browser chrome and device scaling.
                     val historyLines = visionText.textBlocks.flatMap { it.lines }
                         .filter { line ->
-                            val box = line.boundingBox
-                            box != null && box.centerY() / height in 0.60f..0.90f
+                            val bounds = line.boundingBox
+                            bounds != null && bounds.centerY() / screenHeight in 0.60f..0.90f
                         }
                         .sortedWith(compareBy({ it.boundingBox!!.top }, { it.boundingBox!!.left }))
                     val found = mutableListOf<String>()
@@ -113,16 +111,14 @@ class CaptureService : Service() {
                     }
                     if (found.size >= 8) saveSnapshot(found)
                 }
-                .addOnFailureListener { /* Keep the last valid snapshot; do not write partial OCR. */ }
+                .addOnFailureListener { /* Keep the last valid snapshot. */ }
+                .addOnCompleteListener {
+                    crop.recycle()
+                    frame.recycle()
+                }
         } catch (_: Exception) {
-        } finally {
-            image.close()
-            // ML Kit may still be processing; recycle in its completion callback below.
-            // Bitmap cleanup is handled by the completion listener.
+            try { image.close() } catch (_: Exception) {}
         }
-        // Keep the bitmaps alive until ML Kit completes.
-        // They are small screen-sized copies and are recycled after the asynchronous task.
-        // (The task callbacks are attached above.)
     }
 
     private fun saveSnapshot(current: List<String>) {
@@ -131,7 +127,7 @@ class CaptureService : Service() {
         val previous = previousRaw?.split("|")?.filter { it.isNotBlank() } ?: emptyList()
 
         if (previous.isEmpty()) {
-            // Seed the first run with the visible history, without claiming these are new rounds.
+            // Seed visible history once; these are historical samples, not newly observed rounds.
             val existing = prefs.getString("values", "") ?: ""
             val seed = if (existing.isBlank()) current else existing.split("\\n").filter { it.isNotBlank() }
             prefs.edit()
@@ -141,11 +137,9 @@ class CaptureService : Service() {
                 .apply()
             return
         }
-
         if (current == previous) return
 
-        // The visible history is expected to shift toward the end when a new round is added.
-        // Find the smallest shift that makes the remaining current list match the previous list.
+        // Accept new rounds only when the displayed history has shifted and the old sequence overlaps.
         var shift = 0
         val maxShift = minOf(8, current.size - 1, previous.size - 1)
         for (candidate in 1..maxShift) {
@@ -156,8 +150,7 @@ class CaptureService : Service() {
             }
         }
         if (shift == 0) {
-            // A changed layout or noisy OCR is not evidence of a new round.
-            prefs.edit().putString("capture_status", "تغییر صفحه دیده شد؛ هنوز دور جدید تأیید نشده").apply()
+            prefs.edit().putString("capture_status", "تغییر صفحه دیده شد؛ دور جدید هنوز تأیید نشده").apply()
             return
         }
 
