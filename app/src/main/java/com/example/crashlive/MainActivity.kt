@@ -26,7 +26,7 @@ class MainActivity : Activity() {
             setBackgroundColor(Color.rgb(246, 248, 252))
         }
         val title = TextView(this).apply {
-            text = "Crash Live Analyzer"
+            text = "Linkon"
             textSize = 24f
             setTextColor(Color.rgb(20, 40, 80))
             gravity = Gravity.CENTER
