@@ -47,14 +47,14 @@ class OverlayService : Service() {
     private fun startAsForeground() {
         val channelId = "crash_overlay"
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(channelId, "پنل شناور Crash", NotificationManager.IMPORTANCE_LOW)
+            val channel = NotificationChannel(channelId, "پنل شناور Linkon", NotificationManager.IMPORTANCE_LOW)
             (getSystemService(NOTIFICATION_SERVICE) as NotificationManager).createNotificationChannel(channel)
         }
         val notification = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             Notification.Builder(this, channelId)
         } else {
             @Suppress("DEPRECATION") Notification.Builder(this)
-        }.setContentTitle("پنل شناور Crash فعال است")
+        }.setContentTitle("پنل شناور Linkon فعال است")
             .setContentText("برای بستن پنل، از دکمه بستن داخل آن استفاده کن.")
             .setSmallIcon(android.R.drawable.ic_menu_view)
             .setOngoing(true)
@@ -70,7 +70,7 @@ class OverlayService : Service() {
         }
 
         val heading = TextView(this).apply {
-            text = "CRASH LIVE  •  پنل شناور"
+            text = "LINKON  •  تحلیل‌گر شناور"
             textSize = 14f
             setTextColor(Color.WHITE)
             setPadding(0, 0, 0, 6)
@@ -173,25 +173,12 @@ class OverlayService : Service() {
     private fun updateSummary() {
         val prefs = getSharedPreferences("history", MODE_PRIVATE)
         val raw = prefs.getString("values", "") ?: ""
-        val values = raw.split("\n").mapNotNull { line ->
+        val values = raw.split("\\n").mapNotNull { line ->
             line.trim().lowercase(Locale.US).removeSuffix("x").replace(',', '.').toFloatOrNull()
         }.filter { it >= 1f }.take(300)
 
         val captureStatus = prefs.getString("capture_status", "وضعیت بررسی صفحه: شروع نشده") ?: ""
-        if (values.isEmpty()) {
-            summary?.text = "هنوز ضریبی ثبت نشده.\nبررسی صفحه را از برنامه شروع کن.\n$captureStatus"
-            return
-        }
-
-        fun rate(threshold: Float): String {
-            val hits = values.count { it >= threshold }
-            val pct = hits * 100f / values.size
-            return String.format(Locale.US, "%.1fx+: %.1f%%", threshold, pct)
-        }
-
-        summary?.text = "تعداد نمونه تاریخی: ${values.size}\n" +
-            rate(1.5f) + "   " + rate(2f) + "\n" + rate(5f) +
-            "\n$captureStatus\nاین آمار نتیجه راند بعد را پیش‌بینی نمی‌کند."
+        summary?.text = ForecastEngine.buildReport(values) + "\\n" + captureStatus
     }
 
     override fun onDestroy() {
