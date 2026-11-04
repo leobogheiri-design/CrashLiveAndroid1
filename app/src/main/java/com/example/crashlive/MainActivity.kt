@@ -2,8 +2,10 @@ package com.example.crashlive
 
 import android.app.Activity
 import android.content.Intent
+import android.net.Uri
 import android.media.projection.MediaProjectionManager
 import android.os.Bundle
+import android.provider.Settings
 import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.ScrollView
@@ -41,11 +43,28 @@ class MainActivity : Activity() {
                 startActivityForResult(mgr.createScreenCaptureIntent(), requestCapture)
             }
         }
+        val overlay = Button(this).apply {
+            text = "نمایش پنل شناور روی بازی"
+            setOnClickListener {
+                if (Settings.canDrawOverlays(this@MainActivity)) {
+                    startService(Intent(this@MainActivity, OverlayService::class.java))
+                    status.text = "پنل شناور فعال شد. بازی را باز کن."
+                } else {
+                    val intent = Intent(
+                        Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                        Uri.parse("package:$packageName")
+                    )
+                    startActivity(intent)
+                    status.text = "مجوز نمایش روی برنامه‌های دیگر را فعال کن و دوباره این دکمه را بزن."
+                }
+            }
+        }
         val stop = Button(this).apply {
-            text = "توقف بررسی"
+            text = "توقف بررسی و پنل"
             setOnClickListener {
                 stopService(Intent(this@MainActivity, CaptureService::class.java))
-                status.text = "بررسی متوقف شد."
+                stopService(Intent(this@MainActivity, OverlayService::class.java))
+                status.text = "بررسی و پنل متوقف شدند."
             }
         }
         val clear = Button(this).apply {
@@ -57,27 +76,19 @@ class MainActivity : Activity() {
         }
         val mines = Button(this).apply {
             text = "تحلیل احتمال الماس و بمب"
-            setOnClickListener {
-                startActivity(Intent(this@MainActivity, MinesActivity::class.java))
-            }
+            setOnClickListener { startActivity(Intent(this@MainActivity, MinesActivity::class.java)) }
         }
         val blackjack = Button(this).apply {
             text = "راهنمای بلک‌جک"
-            setOnClickListener {
-                startActivity(Intent(this@MainActivity, BlackjackActivity::class.java))
-            }
+            setOnClickListener { startActivity(Intent(this@MainActivity, BlackjackActivity::class.java)) }
         }
         val chicken = Button(this).apply {
             text = "محاسبه ریسک بازی مرغ"
-            setOnClickListener {
-                startActivity(Intent(this@MainActivity, ChickenActivity::class.java))
-            }
+            setOnClickListener { startActivity(Intent(this@MainActivity, ChickenActivity::class.java)) }
         }
         val shellGame = Button(this).apply {
             text = "ردیاب گول یا پوچ"
-            setOnClickListener {
-                startActivity(Intent(this@MainActivity, ShellGameActivity::class.java))
-            }
+            setOnClickListener { startActivity(Intent(this@MainActivity, ShellGameActivity::class.java)) }
         }
         results = TextView(this).apply {
             textSize = 15f
@@ -88,6 +99,7 @@ class MainActivity : Activity() {
         root.addView(title)
         root.addView(status)
         root.addView(start)
+        root.addView(overlay)
         root.addView(stop)
         root.addView(clear)
         root.addView(mines)
@@ -110,7 +122,7 @@ class MainActivity : Activity() {
                 putExtra("data", data)
             }
             startForegroundService(service)
-            status.text = "بررسی زنده فعال است. بازی را باز کن؛ اعلان برنامه را می‌بینی."
+            status.text = "بررسی صفحه فعال است؛ حالا می‌توانی VegasBet را باز کنی."
         } else if (requestCode == requestCapture) {
             status.text = "اجازه ضبط صفحه داده نشد."
         }
