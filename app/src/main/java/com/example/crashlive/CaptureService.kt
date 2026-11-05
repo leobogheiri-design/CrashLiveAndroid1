@@ -129,7 +129,7 @@ class CaptureService : Service() {
         if (previous.isEmpty()) {
             // Seed visible history once; these are historical samples, not newly observed rounds.
             val existing = prefs.getString("values", "") ?: ""
-            val seed = if (existing.isBlank()) current else existing.split("\\n").filter { it.isNotBlank() }
+            val seed = if (existing.isBlank()) current else existing.split("\n").filter { it.isNotBlank() }
             prefs.edit()
                 .putString("values", seed.take(300).joinToString("\n"))
                 .putString("last_snapshot", current.joinToString("|"))
@@ -154,7 +154,7 @@ class CaptureService : Service() {
             return
         }
 
-        val old = (prefs.getString("values", "") ?: "").split("\\n").filter { it.isNotBlank() }
+        val old = (prefs.getString("values", "") ?: "").split("\n").filter { it.isNotBlank() }
         val combined = (current.take(shift) + old).take(300)
         prefs.edit()
             .putString("values", combined.joinToString("\n"))
