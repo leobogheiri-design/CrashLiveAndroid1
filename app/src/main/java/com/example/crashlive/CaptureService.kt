@@ -144,13 +144,18 @@ class CaptureService : Service() {
         val maxShift = minOf(8, current.size - 1, previous.size - 1)
         for (candidate in 1..maxShift) {
             val overlap = minOf(current.size - candidate, previous.size)
-            if (overlap >= 6 && current.drop(candidate).take(overlap) == previous.take(overlap)) {
+            if (overlap >= 3 && current.drop(candidate).take(overlap) == previous.take(overlap)) {
                 shift = candidate
                 break
             }
         }
         if (shift == 0) {
-            prefs.edit().putString("capture_status", "تغییر صفحه دیده شد؛ دور جدید هنوز تأیید نشده").apply()
+            // Re-baseline after the OCR region/layout changes or an old incompatible snapshot.
+            // Without this, a stale snapshot can prevent all future rounds from ever matching.
+            prefs.edit()
+                .putString("last_snapshot", current.joinToString("|"))
+                .putString("capture_status", "تاریخچه دوباره همگام شد؛ منتظر دور بعد")
+                .apply()
             return
         }
 
