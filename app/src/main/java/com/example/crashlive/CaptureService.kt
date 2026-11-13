@@ -89,12 +89,12 @@ class CaptureService : Service() {
             recognizer.process(InputImage.fromBitmap(crop, 0))
                 .addOnSuccessListener { visionText ->
                     val screenHeight = crop.height.toFloat()
-                    // The supplied VegasBet screenshot places the latest-explosions grid at ~66–82% height.
-                    // Keep a wider band for small differences in browser chrome and device scaling.
+                    // VegasBet's supplied layout places the five recent multipliers near the top (~25% screen height).
+                    // Restrict OCR to this band so the bet controls and chart axes are not mistaken for history.
                     val historyLines = visionText.textBlocks.flatMap { it.lines }
                         .filter { line ->
                             val bounds = line.boundingBox
-                            bounds != null && bounds.centerY() / screenHeight in 0.60f..0.90f
+                            bounds != null && bounds.centerY() / screenHeight in 0.15f..0.40f
                         }
                         .sortedWith(compareBy({ it.boundingBox!!.top }, { it.boundingBox!!.left }))
                     val found = mutableListOf<String>()
@@ -109,7 +109,7 @@ class CaptureService : Service() {
                         }
                         if (found.size >= 40) break
                     }
-                    if (found.size >= 8) saveSnapshot(found)
+                    if (found.size >= 5) saveSnapshot(found)
                 }
                 .addOnFailureListener { /* Keep the last valid snapshot. */ }
                 .addOnCompleteListener {
