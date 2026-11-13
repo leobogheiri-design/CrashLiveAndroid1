@@ -30,6 +30,8 @@ class CaptureService : Service() {
     private var worker: Handler? = null
     private var thread: HandlerThread? = null
     private var lastScanAt = 0L
+    // Prevent overlapping OCR jobs from exhausting ImageReader buffers.
+    @Volatile private var isProcessing = false
     private val recognizer by lazy { TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS) }
     private val multiplierPattern = Pattern.compile("(?i)(\\d{1,4}[.,]\\d{1,2}|\\d{1,4})\\s*[x×]")
 
@@ -63,8 +65,9 @@ class CaptureService : Service() {
         reader!!.setOnImageAvailableListener({ imageReader ->
             val now = System.currentTimeMillis()
             val image = imageReader.acquireLatestImage() ?: return@setOnImageAvailableListener
-            if (now - lastScanAt < 1800) { image.close(); return@setOnImageAvailableListener }
+            if (now - lastScanAt < 1800 || isProcessing) { image.close(); return@setOnImageAvailableListener }
             lastScanAt = now
+            isProcessing = true
             processImage(image)
         }, worker)
         virtualDisplay = projection?.createVirtualDisplay(
@@ -115,8 +118,10 @@ class CaptureService : Service() {
                 .addOnCompleteListener {
                     crop.recycle()
                     frame.recycle()
+                    isProcessing = false
                 }
         } catch (_: Exception) {
+            isProcessing = false
             try { image.close() } catch (_: Exception) {}
         }
     }
@@ -139,27 +144,45 @@ class CaptureService : Service() {
         }
         if (current == previous) return
 
-        // Accept new rounds only when the displayed history has shifted and the old sequence overlaps.
-        var shift = 0
-        val maxShift = minOf(8, current.size - 1, previous.size - 1)
+        // OCR may change punctuation or rounding between frames. Compare numeric values
+        // with a small tolerance and choose the strongest overlap before accepting new rounds.
+        fun number(value: String): Float? = value.trim().lowercase(Locale.US)
+            .removeSuffix("x").replace(',', '.').toFloatOrNull()
+        var bestShift = 0
+        var bestMatches = 0
+        var bestOverlap = 0
+        val maxShift = minOf(12, current.size - 1, previous.size - 1)
         for (candidate in 1..maxShift) {
             val overlap = minOf(current.size - candidate, previous.size)
-            if (overlap >= 6 && current.drop(candidate).take(overlap) == previous.take(overlap)) {
-                shift = candidate
-                break
+            if (overlap < 5) continue
+            var matches = 0
+            for (i in 0 until overlap) {
+                val a = number(current[i + candidate]) ?: continue
+                val b = number(previous[i]) ?: continue
+                val tolerance = maxOf(0.015f, b * 0.004f)
+                if (kotlin.math.abs(a - b) <= tolerance) matches++
+            }
+            if (matches > bestMatches || (matches == bestMatches && overlap > bestOverlap)) {
+                bestShift = candidate
+                bestMatches = matches
+                bestOverlap = overlap
             }
         }
-        if (shift == 0) {
-            prefs.edit().putString("capture_status", "تغییر صفحه دیده شد؛ دور جدید هنوز تأیید نشده").apply()
+
+        val requiredMatches = maxOf(5, kotlin.math.ceil(bestOverlap * 0.65).toInt())
+        if (bestShift == 0 || bestMatches < requiredMatches) {
+            prefs.edit()
+                .putString("capture_status", "تاریخچه خوانده شد؛ تطبیق راند جدید در انتظار تأیید است")
+                .apply()
             return
         }
 
         val old = (prefs.getString("values", "") ?: "").split("\n").filter { it.isNotBlank() }
-        val combined = (current.take(shift) + old).take(300)
+        val combined = (current.take(bestShift) + old).take(300)
         prefs.edit()
             .putString("values", combined.joinToString("\n"))
             .putString("last_snapshot", current.joinToString("|"))
-            .putString("capture_status", "دور جدید از تاریخچه شناسایی شد")
+            .putString("capture_status", "تاریخچه به‌روزرسانی شد؛ ${combined.size} نمونه ثبت شده")
             .apply()
     }
 
